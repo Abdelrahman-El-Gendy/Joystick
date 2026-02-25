@@ -2,19 +2,30 @@ package com.joystick.app.presentation.gamelist
 
 import com.joystick.app.domain.model.Game
 
-/**
- * Sealed interface representing all possible UI states for the Game List screen.
- * Using sealed interface for exhaustive `when` handling in Compose.
- */
 sealed interface GameListUiState {
-    data object Loading : GameListUiState
+
+    object InitialLoading : GameListUiState
 
     data class Success(
-        val games: List<Game>,
-        val selectedGenre: String?,
-        val isLoadingMore: Boolean = false,
-        val canLoadMore: Boolean = true
+        val allGames: List<Game>,
+        val filteredGames: List<Game>,
+        val isLoadingNextPage: Boolean = false,
+        val searchQuery: String = "",
+        val hasNextPage: Boolean = true,
+        val paginationError: String? = null,
+        val selectedGenre: String? = null
     ) : GameListUiState
 
     data class Error(val message: String) : GameListUiState
+
+    data class Empty(
+        val reason: EmptyReason,
+        val selectedGenre: String? = null,
+        val searchQuery: String = ""
+    ) : GameListUiState
+}
+
+enum class EmptyReason {
+    NO_GENRE_RESULTS,
+    NO_SEARCH_RESULTS
 }

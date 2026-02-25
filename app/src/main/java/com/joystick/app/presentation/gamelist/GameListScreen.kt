@@ -1,84 +1,269 @@
 package com.joystick.app.presentation.gamelist
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedFilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.joystick.app.domain.model.Game
-import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameListScreen(
-    onGameClick: (Int) -> Unit,
+    genre: String,
+    onGameClick: (gameId: Int) -> Unit,
+    onBackClick: () -> Unit,
     viewModel: GameListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        when (val state = uiState) {
-            is GameListUiState.Loading -> LoadingState()
-            is GameListUiState.Error -> ErrorState(
-                message = state.message,
-                onRetry = viewModel::retry
+    val successState = uiState as? GameListUiState.Success
+    val paginationError = successState?.paginationError
+
+    LaunchedEffect(paginationError) {
+        paginationError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearPaginationError()
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = "Joystick",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
-            is GameListUiState.Success -> SuccessContent(
-                state = state,
-                availableGenres = viewModel.availableGenres,
-                onGameClick = onGameClick,
-                onGenreSelected = viewModel::onGenreSelected,
-                onLoadMore = viewModel::loadMore
+        }
+    ) { paddingValues ->
+        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+            when (val state = uiState) {
+                is GameListUiState.Success -> SuccessContent(
+                    state = state,
+                    availableGenres = viewModel.availableGenres,
+                    selectedGenre = state.selectedGenre,
+                    onGameClick = onGameClick,
+                    onGenreSelected = viewModel::onGenreSelected,
+                    onSearchQueryChanged = viewModel::onSearchQueryChanged,
+                    onLoadNextPage = viewModel::loadNextPage
+                )
+                is GameListUiState.Empty -> {
+                    if (state.reason == EmptyReason.NO_SEARCH_RESULTS) {
+                        EmptySearchResults(
+                            searchQuery = state.searchQuery,
+                            availableGenres = viewModel.availableGenres,
+                            selectedGenre = state.selectedGenre,
+                            onGenreSelected = viewModel::onGenreSelected,
+                            onSearchQueryChanged = viewModel::onSearchQueryChanged
+                        )
+                    } else {
+                        EmptyGenreResults(onBackClick)
+                    }
+                }
+                is GameListUiState.InitialLoading -> InitialLoadingState()
+                is GameListUiState.Error -> ErrorState(state.message, viewModel::retry)
+            }
+        }
+    }
+}
+
+// ──────────────────────────────────────────────────────────
+// Content Layouts
+// ──────────────────────────────────────────────────────────
+
+@Composable
+private fun InitialLoadingState() {
+    LazyColumn(
+        contentPadding = PaddingValues(vertical = 8.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        items(6) {
+            GameCardShimmer()
+        }
+    }
+}
+
+@Composable
+private fun ErrorState(message: String, onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.Warning,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text("Retry")
+        }
+    }
+}
+
+@Composable
+private fun EmptyGenreResults(onBackClick: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.PlayArrow,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "No Games Found",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "No games available for this genre",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedButton(onClick = onBackClick) {
+            Text("Go Back")
+        }
+    }
+}
+
+@Composable
+private fun EmptySearchResults(
+    searchQuery: String, 
+    availableGenres: List<String>,
+    selectedGenre: String?,
+    onGenreSelected: (String) -> Unit,
+    onSearchQueryChanged: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        SearchBar(
+            query = searchQuery,
+            onQueryChanged = onSearchQueryChanged,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        GenreChipRow(
+            genres = availableGenres,
+            selectedGenre = selectedGenre,
+            onGenreSelected = onGenreSelected
+        )
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "No Results Found",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Try a different search term",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -88,125 +273,140 @@ fun GameListScreen(
 private fun SuccessContent(
     state: GameListUiState.Success,
     availableGenres: List<String>,
+    selectedGenre: String?,
     onGameClick: (Int) -> Unit,
-    onGenreSelected: (String?) -> Unit,
-    onLoadMore: () -> Unit
+    onGenreSelected: (String) -> Unit,
+    onSearchQueryChanged: (String) -> Unit,
+    onLoadNextPage: () -> Unit
 ) {
-    val listState = rememberLazyListState()
+    val lazyListState = rememberLazyListState()
 
-    // Trigger load more when near the end
-    val shouldLoadMore by remember {
-        derivedStateOf {
-            val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisibleItem >= state.games.size - 5
+    val lastVisibleIndex = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+    LaunchedEffect(lastVisibleIndex) {
+        if (lastVisibleIndex != null && lastVisibleIndex >= state.filteredGames.size - 3) {
+            onLoadNextPage()
         }
     }
 
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore && state.canLoadMore && !state.isLoadingMore) {
-            onLoadMore()
-        }
-    }
-
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
-            bottom = 24.dp
+    Column(modifier = Modifier.fillMaxSize()) {
+        SearchBar(
+            query = state.searchQuery,
+            onQueryChanged = onSearchQueryChanged,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         )
-    ) {
-        // Header
-        item {
-            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "🎮 Joystick",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+        GenreChipRow(
+            genres = availableGenres,
+            selectedGenre = selectedGenre,
+            onGenreSelected = onGenreSelected
+        )
+
+        LazyColumn(
+            state = lazyListState,
+            contentPadding = PaddingValues(vertical = 8.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(
+                items = state.filteredGames,
+                key = { it.id }
+            ) { game ->
+                GameCard(
+                    game = game,
+                    onClick = { onGameClick(game.id) }
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Discover your next favorite game",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(16.dp))
             }
-        }
 
-        // Genre filter chips
-        item {
-            GenreChipRow(
-                genres = availableGenres,
-                selectedGenre = state.selectedGenre,
-                onGenreSelected = onGenreSelected
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-
-        // Game cards
-        itemsIndexed(
-            items = state.games,
-            key = { _, game -> game.id }
-        ) { _, game ->
-            GameCard(
-                game = game,
-                onClick = { onGameClick(game.id) }
-            )
-        }
-
-        // Loading more indicator
-        if (state.isLoadingMore) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(32.dp),
-                        strokeWidth = 3.dp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+            if (state.isLoadingNextPage) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 3.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+// ──────────────────────────────────────────────────────────
+// Reusable Components
+// ──────────────────────────────────────────────────────────
+
 @Composable
 private fun GenreChipRow(
     genres: List<String>,
     selectedGenre: String?,
-    onGenreSelected: (String?) -> Unit
+    onGenreSelected: (String) -> Unit
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
         items(genres) { genre ->
-            val isSelected = selectedGenre == genre
-            ElevatedFilterChip(
-                selected = isSelected,
+            FilterChip(
+                selected = genre == selectedGenre,
                 onClick = { onGenreSelected(genre) },
-                label = {
-                    Text(
-                        text = genre.replaceFirstChar {
-                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
-                        },
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                    )
-                },
-                colors = FilterChipDefaults.elevatedFilterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                label = { Text(genre.replaceFirstChar { it.uppercase() }) },
+                shape = RoundedCornerShape(percent = 50),
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                border = null
             )
         }
     }
+}
+
+@Composable
+private fun SearchBar(
+    query: String,
+    onQueryChanged: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TextField(
+        value = query,
+        onValueChange = onQueryChanged,
+        modifier = modifier,
+        placeholder = { Text("Search games...") },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChanged("") }) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = "Clear",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(percent = 50),
+        colors = TextFieldDefaults.colors(
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+        )
+    )
 }
 
 @Composable
@@ -278,7 +478,7 @@ private fun GameCard(
                             )
                             Spacer(modifier = Modifier.width(2.dp))
                             Text(
-                                text = String.format("%.1f", game.rating),
+                                text = String.format(java.util.Locale.US, "%.1f", game.rating),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -340,61 +540,54 @@ private fun GameCard(
 }
 
 @Composable
-private fun LoadingState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+private fun GameCardShimmer() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
-                strokeWidth = 4.dp,
-                color = MaterialTheme.colorScheme.primary
+        Column {
+            ShimmerBox(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Loading games...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Column(modifier = Modifier.padding(14.dp)) {
+                ShimmerBox(modifier = Modifier.fillMaxWidth(0.6f).height(20.dp).clip(RoundedCornerShape(4.dp)))
+                Spacer(modifier = Modifier.height(8.dp))
+                ShimmerBox(modifier = Modifier.fillMaxWidth(0.4f).height(12.dp).clip(RoundedCornerShape(4.dp)))
+            }
         }
     }
 }
 
 @Composable
-private fun ErrorState(
-    message: String,
-    onRetry: () -> Unit
-) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
-        ) {
-            Text(
-                text = "😔",
-                style = MaterialTheme.typography.displayMedium
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Something went wrong",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            TextButton(onClick = onRetry) {
-                Text(text = "Retry", fontWeight = FontWeight.SemiBold)
-            }
-        }
-    }
+private fun ShimmerBox(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val translateAnim by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer_translate"
+    )
+
+    val color1 = MaterialTheme.colorScheme.surfaceVariant
+    val color2 = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+
+    val brush = Brush.linearGradient(
+        colors = listOf(color1, color2, color1),
+        start = Offset.Zero,
+        end = Offset(x = translateAnim, y = translateAnim)
+    )
+
+    Spacer(modifier = modifier.background(brush))
 }

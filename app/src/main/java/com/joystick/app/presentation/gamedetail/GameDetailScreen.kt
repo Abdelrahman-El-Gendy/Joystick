@@ -1,53 +1,47 @@
 package com.joystick.app.presentation.gamedetail
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.background
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.DateRange
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -60,17 +54,10 @@ fun GameDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is GameDetailUiState.Loading -> LoadingState()
-            is GameDetailUiState.Error -> ErrorState(
-                message = state.message,
-                onRetry = viewModel::retry,
-                onBackClick = onBackClick
-            )
+            is GameDetailUiState.Error -> ErrorState(state.message, viewModel::retry)
             is GameDetailUiState.Success -> DetailContent(
                 game = state.game,
                 onBackClick = onBackClick
@@ -80,400 +67,195 @@ fun GameDetailScreen(
 }
 
 @Composable
+private fun LoadingState() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun ErrorState(message: String, onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        Button(onClick = onRetry) {
+            Text("Retry")
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 private fun DetailContent(
     game: GameDetail,
     onBackClick: () -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 32.dp)
-    ) {
-        // Hero image with back button
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 10f)
-            ) {
-                AsyncImage(
-                    model = game.imageUrl,
-                    contentDescription = game.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+    val context = LocalContext.current
 
-                // Top gradient
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                        .align(Alignment.TopCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Black.copy(alpha = 0.6f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-
-                // Bottom gradient
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.8f)
-                                )
-                            )
-                        )
-                )
-
-                // Back button
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier
-                        .padding(
-                            top = WindowInsets.statusBars.asPaddingValues()
-                                .calculateTopPadding() + 8.dp,
-                            start = 8.dp
-                        )
-                        .align(Alignment.TopStart),
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = Color.Black.copy(alpha = 0.4f),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = "Back"
-                    )
-                }
-
-                // Title over image at bottom
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
-                ) {
-                    if (game.isTba) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.tertiary
-                        ) {
-                            Text(
-                                text = "TBA",
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onTertiary
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                    }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { 
                     Text(
-                        text = game.name,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        maxLines = 2,
+                        text = game.name, 
+                        maxLines = 1, 
                         overflow = TextOverflow.Ellipsis
-                    )
+                    ) 
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
                 }
-            }
+            )
         }
-
-        // Stats row
-        item {
-            Row(
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+        ) {
+            AsyncImage(
+                model = game.imageUrl,
+                contentDescription = game.name,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Rating
-                StatCard(
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Rounded.Star,
-                            contentDescription = null,
-                            tint = Color(0xFFFFB300),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    },
-                    label = "Rating",
-                    value = String.format("%.1f", game.rating),
-                    modifier = Modifier.weight(1f)
-                )
+                    .height(280.dp)
+            )
 
-                // Metacritic
-                game.metacritic?.let { score ->
-                    StatCard(
-                        icon = {
-                            Text(
-                                text = "M",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Black,
-                                color = when {
-                                    score >= 75 -> Color(0xFF66BB6A)
-                                    score >= 50 -> Color(0xFFFFCA28)
-                                    else -> Color(0xFFEF5350)
-                                }
-                            )
-                        },
-                        label = "Metacritic",
-                        value = "$score",
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+            Spacer(modifier = Modifier.height(16.dp))
 
-                // Release date
-                game.released?.let { date ->
-                    StatCard(
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Rounded.DateRange,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        label = "Released",
-                        value = date,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                // Playtime
-                if (game.playtime > 0) {
-                    StatCard(
-                        icon = {
-                            Text(
-                                text = "🕹️",
-                                style = MaterialTheme.typography.titleSmall
-                            )
-                        },
-                        label = "Playtime",
-                        value = "${game.playtime}h",
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-
-        // Additional image
-        game.imageUrlAdditional?.let { additionalUrl ->
-            item {
-                Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                    Text(
-                        text = "Gallery",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    AsyncImage(
-                        model = additionalUrl,
-                        contentDescription = "Additional image",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(16f / 9f)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-        }
-
-        // Description
-        game.description?.takeIf { it.isNotBlank() }?.let { description ->
-            item {
-                ExpandableDescription(description = description)
-            }
-        }
-
-        // Info rows
-        item {
-            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                game.website?.takeIf { it.isNotBlank() }?.let { url ->
-                    InfoRow(label = "Website", value = url)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExpandableDescription(description: String) {
-    var isExpanded by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .padding(horizontal = 20.dp)
-            .animateContentSize()
-    ) {
-        Text(
-            text = "About",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = if (isExpanded) Int.MAX_VALUE else 4,
-            overflow = TextOverflow.Ellipsis
-        )
-        if (description.length > 200) {
-            TextButton(
-                onClick = { isExpanded = !isExpanded },
-                modifier = Modifier.align(Alignment.End)
-            ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Text(
-                    text = if (isExpanded) "Show Less" else "Read More",
-                    fontWeight = FontWeight.SemiBold
+                    text = game.name,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Released: ${game.released ?: "TBA"}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RatingBar(rating = game.rating)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${game.rating} / 5",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                if (game.metacritic != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    MetacriticBadge(score = game.metacritic)
+                }
+
+                if (game.playtime > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Avg Playtime: ${game.playtime}h",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "About",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = game.description ?: "No description available.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    lineHeight = 22.sp
+                )
+
+                game.website?.takeIf { it.isNotBlank() }?.let { url ->
+                    Spacer(modifier = Modifier.height(24.dp))
+                    FilledTonalButton(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Visit Website")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 
 @Composable
-private fun StatCard(
-    icon: @Composable () -> Unit,
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            icon()
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
+private fun RatingBar(rating: Double) {
+    Row {
+        val fullStars = rating.toInt()
+        val hasHalfStar = rating - fullStars >= 0.5
 
-@Composable
-private fun InfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp)
-    ) {
-        Text(
-            text = "$label: ",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun LoadingState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
-                strokeWidth = 4.dp,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Loading details...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun ErrorState(
-    message: String,
-    onRetry: () -> Unit,
-    onBackClick: () -> Unit
-) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        IconButton(
-            onClick = onBackClick,
-            modifier = Modifier
-                .padding(
-                    top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
-                    start = 8.dp
-                )
-                .align(Alignment.TopStart)
-        ) {
+        repeat(fullStars) {
             Icon(
-                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = "Back"
+                imageVector = Icons.Rounded.Star,
+                contentDescription = null,
+                tint = Color(0xFFFFB300),
+                modifier = Modifier.size(16.dp)
             )
         }
+        if (hasHalfStar) {
+            Icon(
+                imageVector = Icons.Rounded.Star,
+                contentDescription = null,
+                tint = Color(0xFFFFB300).copy(alpha = 0.5f),
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
 
-        Column(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "😔",
-                style = MaterialTheme.typography.displayMedium
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Something went wrong",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            TextButton(onClick = onRetry) {
-                Text(text = "Retry", fontWeight = FontWeight.SemiBold)
-            }
-        }
+@Composable
+private fun MetacriticBadge(score: Int) {
+    val backgroundColor = when {
+        score >= 75 -> Color(0xFF66BB6A)
+        score >= 50 -> Color(0xFFFFCA28)
+        else -> Color(0xFFEF5350)
+    }
+
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = backgroundColor
+    ) {
+        Text(
+            text = score.toString(),
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        )
     }
 }

@@ -8,36 +8,33 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.joystick.app.presentation.gamedetail.GameDetailScreen
 import com.joystick.app.presentation.gamelist.GameListScreen
+import com.joystick.app.presentation.genrepicker.GenrePickerScreen
 
-/**
- * Defines the app's navigation routes.
- */
-object Routes {
-    const val GAME_LIST = "game_list"
-    const val GAME_DETAIL = "game_detail/{gameId}"
-
-    fun gameDetail(gameId: Int): String = "game_detail/$gameId"
-}
-
-/**
- * Top-level navigation graph for the Joystick app.
- */
 @Composable
 fun JoystickNavGraph(navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = Routes.GAME_LIST
+        startDestination = "game_list/action"
     ) {
-        composable(route = Routes.GAME_LIST) {
+        composable(
+            route = "game_list/{genre}",
+            arguments = listOf(
+                navArgument("genre") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
             GameListScreen(
-                onGameClick = { gameId ->
-                    navController.navigate(Routes.gameDetail(gameId))
+                genre = backStackEntry.arguments?.getString("genre") ?: "action",
+                onGameClick = { id ->
+                    navController.navigate("game_detail/$id")
+                },
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }
 
         composable(
-            route = Routes.GAME_DETAIL,
+            route = "game_detail/{gameId}",
             arguments = listOf(
                 navArgument("gameId") { type = NavType.IntType }
             )

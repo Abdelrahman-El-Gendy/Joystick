@@ -1,5 +1,6 @@
 package com.joystick.app.presentation.gamelist
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.joystick.app.domain.model.Game
@@ -13,41 +14,63 @@ import javax.inject.Inject
 
 @HiltViewModel
 class GameListViewModel @Inject constructor(
-    private val getGamesUseCase: GetGamesUseCase
+    private val getGamesUseCase: GetGamesUseCase,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<GameListUiState>(GameListUiState.Loading)
-    val uiState: StateFlow<GameListUiState> = _uiState.asStateFlow()
+    var genre: String = savedStateHandle["genre"] ?: "action"
+        private set
 
-    private var currentPage = 1
-    private var selectedGenre: String? = null
-    private var allGames = mutableListOf<Game>()
-
-    /** Hardcoded genre list — avoids an extra API call for the filter chips. */
     val availableGenres = listOf(
-        "action", "adventure", "rpg", "strategy", "shooter",
-        "puzzle", "racing", "sports", "simulation", "platformer",
-        "fighting", "indie", "casual", "arcade", "family"
+        "action", "indie", "adventure", "rpg", "strategy", "shooter",
+        "casual", "simulation", "puzzle", "arcade", "platformer",
+        "racing", "sports", "fighting", "family"
     )
 
+
+    private val _uiState = MutableStateFlow<GameListUiState>(GameListUiState.InitialLoading)
+    val uiState: StateFlow<GameListUiState> = _uiState.asStateFlow()
+
+    private var currentPage: Int = 1
+    private var hasNextPage: Boolean = true
+    private var isLoadingNextPage: Boolean = false
+
+    private val allGames = mutableListOf<Game>()
+    private var searchQuery = ""
+
     init {
-        loadInitialData()
+        loadGames()
     }
 
-    private fun loadInitialData() {
+    fun loadGames() {
+        currentPage = 1
+        hasNextPage = true
+        isLoadingNextPage = false
+        searchQuery = ""
+        allGames.clear()
+
+        _uiState.value = GameListUiState.InitialLoading
+
         viewModelScope.launch {
-            _uiState.value = GameListUiState.Loading
-            val genre = selectedGenre ?: availableGenres.first()
             getGamesUseCase(genre = genre, page = 1).fold(
                 onSuccess = { page ->
-                    currentPage = 1
-                    allGames.clear()
+                    hasNextPage = page.hasNextPage
                     allGames.addAll(page.games)
-                    _uiState.value = GameListUiState.Success(
-                        games = allGames.toList(),
-                        selectedGenre = genre,
-                        canLoadMore = page.hasNextPage
-                    )
+
+                    if (allGames.isEmpty()) {
+                        _uiState.value = GameListUiState.Empty(
+                            reason = EmptyReason.NO_GENRE_RESULTS,
+                            selectedGenre = genre,
+                            searchQuery = searchQuery
+                        )
+                    } else {
+                        _uiState.value = GameListUiState.Success(
+                            allGames = allGames.toList(),
+                            filteredGames = allGames.toList(),
+                            hasNextPage = hasNextPage,
+                            selectedGenre = genre
+                        )
+                    }
                 },
                 onFailure = { error ->
                     _uiState.value = GameListUiState.Error(
@@ -58,40 +81,107 @@ class GameListViewModel @Inject constructor(
         }
     }
 
-    fun onGenreSelected(genre: String?) {
-        if (selectedGenre == genre) return
-        selectedGenre = genre
-        loadInitialData()
-    }
+    fun loadNextPage() {
+        if (isLoadingNextPage || !hasNextPage) return
 
-    fun loadMore() {
         val currentState = _uiState.value
         if (currentState !is GameListUiState.Success) return
-        if (currentState.isLoadingMore || !currentState.canLoadMore) return
 
-        _uiState.value = currentState.copy(isLoadingMore = true)
-        val genre = selectedGenre ?: availableGenres.first()
+        isLoadingNextPage = true
+        _uiState.value = currentState.copy(isLoadingNextPage = true)
 
         viewModelScope.launch {
-            getGamesUseCase(genre = genre, page = currentPage + 1).fold(
+            currentPage++
+            getGamesUseCase(genre = genre, page = currentPage).fold(
                 onSuccess = { page ->
-                    currentPage++
                     allGames.addAll(page.games)
+                    hasNextPage = page.hasNextPage
+
+                    val filtered = applySearchFilter(allGames, searchQuery)
+
                     _uiState.value = GameListUiState.Success(
-                        games = allGames.toList(),
-                        selectedGenre = selectedGenre,
-                        isLoadingMore = false,
-                        canLoadMore = page.hasNextPage
+                        allGames = allGames.toList(),
+                        filteredGames = filtered,
+                        isLoadingNextPage = false,
+                        searchQuery = searchQuery,
+                        hasNextPage = hasNextPage,
+                        selectedGenre = genre
                     )
                 },
-                onFailure = {
-                    _uiState.value = currentState.copy(isLoadingMore = false)
+                onFailure = { error ->
+                    currentPage--
+                    _uiState.value = currentState.copy(
+                        isLoadingNextPage = false,
+                        paginationError = error.localizedMessage ?: "Failed to load more games"
+                    )
                 }
+            )
+            isLoadingNextPage = false
+        }
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        val currentState = _uiState.value
+        if (currentState !is GameListUiState.Success && currentState !is GameListUiState.Empty) return
+
+        searchQuery = query
+
+        if (allGames.isEmpty()) return
+
+        val filtered = applySearchFilter(allGames, query)
+
+        if (filtered.isEmpty() && query.isNotEmpty()) {
+            _uiState.value = GameListUiState.Empty(
+                reason = EmptyReason.NO_SEARCH_RESULTS,
+                selectedGenre = genre,
+                searchQuery = query
+            )
+        } else if (query.isEmpty() && currentState is GameListUiState.Empty) {
+            _uiState.value = GameListUiState.Success(
+                allGames = allGames.toList(),
+                filteredGames = allGames.toList(),
+                isLoadingNextPage = false,
+                searchQuery = query,
+                hasNextPage = hasNextPage,
+                selectedGenre = genre
+            )
+        } else {
+            _uiState.value = GameListUiState.Success(
+                allGames = allGames.toList(),
+                filteredGames = filtered,
+                isLoadingNextPage = false,
+                searchQuery = query,
+                hasNextPage = hasNextPage,
+                selectedGenre = genre
             )
         }
     }
 
+    fun onGenreSelected(newGenre: String) {
+        if (genre == newGenre) return
+        genre = newGenre
+        loadGames()
+    }
+
     fun retry() {
-        loadInitialData()
+        currentPage = 1
+        hasNextPage = true
+        isLoadingNextPage = false
+        loadGames()
+    }
+
+    fun clearPaginationError() {
+        val currentState = _uiState.value
+        if (currentState is GameListUiState.Success) {
+            _uiState.value = currentState.copy(paginationError = null)
+        }
+    }
+
+    private fun applySearchFilter(games: List<Game>, query: String): List<Game> {
+        return if (query.isBlank()) {
+            games
+        } else {
+            games.filter { it.name.contains(query, ignoreCase = true) }
+        }
     }
 }

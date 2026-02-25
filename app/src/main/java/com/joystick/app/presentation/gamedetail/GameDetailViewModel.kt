@@ -17,19 +17,19 @@ class GameDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val gameId: Int = checkNotNull(savedStateHandle["gameId"])
+    private val gameId: Int = savedStateHandle["gameId"] ?: error("gameId required")
 
     private val _uiState = MutableStateFlow<GameDetailUiState>(GameDetailUiState.Loading)
     val uiState: StateFlow<GameDetailUiState> = _uiState.asStateFlow()
 
     init {
-        loadGameDetail()
+        loadGameDetail(gameId)
     }
 
-    private fun loadGameDetail() {
+    private fun loadGameDetail(id: Int) {
+        _uiState.value = GameDetailUiState.Loading
         viewModelScope.launch {
-            _uiState.value = GameDetailUiState.Loading
-            getGameDetailUseCase(gameId).fold(
+            getGameDetailUseCase(id).fold(
                 onSuccess = { detail ->
                     _uiState.value = GameDetailUiState.Success(detail)
                 },
@@ -43,6 +43,6 @@ class GameDetailViewModel @Inject constructor(
     }
 
     fun retry() {
-        loadGameDetail()
+        loadGameDetail(gameId)
     }
 }
