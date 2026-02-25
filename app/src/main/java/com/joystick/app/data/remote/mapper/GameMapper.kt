@@ -6,6 +6,12 @@ import com.joystick.app.data.remote.dto.GamesResponseDto
 import com.joystick.app.domain.model.Game
 import com.joystick.app.domain.model.GameDetail
 import com.joystick.app.domain.model.GamesPage
+import com.joystick.app.data.remote.dto.TrailerDto
+import com.joystick.app.data.remote.dto.TrailersResponseDto
+import com.joystick.app.data.remote.dto.ScreenshotDto
+import com.joystick.app.data.remote.dto.ScreenshotsResponseDto
+import com.joystick.app.domain.model.Trailer
+import com.joystick.app.domain.model.Screenshot
 
 /**
  * Pure mapping functions: DTO → Domain.
@@ -41,3 +47,21 @@ fun GamesResponseDto.toDomain(): GamesPage = GamesPage(
     hasNextPage = next != null,
     totalCount = count
 )
+
+fun TrailerDto.toDomain() = Trailer(
+    id = id,
+    name = name,
+    thumbnailUrl = preview,
+    videoUrl = data.max
+)
+
+fun ScreenshotDto.toDomain() = Screenshot(
+    id = id,
+    imageUrl = image
+)
+
+fun TrailersResponseDto.toDomain() = results.map { it.toDomain() }
+
+fun ScreenshotsResponseDto.toDomain() = results
+    .filter { !it.isDeleted }
+    .map { it.toDomain() }

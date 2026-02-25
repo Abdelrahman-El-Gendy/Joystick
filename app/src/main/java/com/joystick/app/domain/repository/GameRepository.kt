@@ -2,6 +2,8 @@ package com.joystick.app.domain.repository
 
 import com.joystick.app.domain.model.GameDetail
 import com.joystick.app.domain.model.GamesPage
+import com.joystick.app.domain.model.Screenshot
+import com.joystick.app.domain.model.Trailer
 
 /**
  * Repository contract for game data access.
@@ -25,4 +27,8 @@ interface GameRepository {
      * @return [Result] wrapping a [GameDetail] on success, or a failure on error.
      */
     suspend fun getGameDetail(id: Int): Result<GameDetail>
+
+    suspend fun getGameTrailers(id: Int): Result<List<Trailer>>
+
+    suspend fun getGameScreenshots(id: Int): Result<List<Screenshot>>
 }

@@ -4,6 +4,8 @@ import com.joystick.app.data.remote.api.RawgApiService
 import com.joystick.app.data.remote.mapper.toDomain
 import com.joystick.app.domain.model.GameDetail
 import com.joystick.app.domain.model.GamesPage
+import com.joystick.app.domain.model.Screenshot
+import com.joystick.app.domain.model.Trailer
 import com.joystick.app.domain.repository.GameRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -30,4 +32,10 @@ class GameRepositoryImpl @Inject constructor(
             api.getGameDetail(id = id).toDomain()
         }
     }
+
+    override suspend fun getGameTrailers(id: Int): Result<List<Trailer>> =
+        runCatching { api.getGameTrailers(id).toDomain() }
+
+    override suspend fun getGameScreenshots(id: Int): Result<List<Screenshot>> =
+        runCatching { api.getGameScreenshots(id).toDomain() }
 }

@@ -2,6 +2,8 @@ package com.joystick.app.data.remote.api
 
 import com.joystick.app.data.remote.dto.GameDetailDto
 import com.joystick.app.data.remote.dto.GamesResponseDto
+import com.joystick.app.data.remote.dto.ScreenshotsResponseDto
+import com.joystick.app.data.remote.dto.TrailersResponseDto
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -40,4 +42,14 @@ interface RawgApiService {
     suspend fun getGameDetail(
         @Path("id") id: Int
     ): GameDetailDto
+
+    @GET("games/{id}/movies")
+    suspend fun getGameTrailers(
+        @Path("id") id: Int
+    ): TrailersResponseDto
+
+    @GET("games/{id}/screenshots")
+    suspend fun getGameScreenshots(
+        @Path("id") id: Int
+    ): ScreenshotsResponseDto
 }
