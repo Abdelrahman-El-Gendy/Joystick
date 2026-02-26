@@ -12,7 +12,6 @@ import com.joystick.app.ui.components.EmptyStateView
 internal fun GameListEmptyView(
     reason: EmptyReason,
     onRetry: () -> Unit,
-    onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     when (reason) {
@@ -29,8 +28,8 @@ internal fun GameListEmptyView(
                 icon = Icons.Default.PlayArrow,
                 title = "No Games Found",
                 description = "No games available for this genre",
-                onAction = onBackClick,
-                actionLabel = "Go Back",
+                onAction = onRetry,
+                actionLabel = "Retry",
                 modifier = modifier
             )
         }

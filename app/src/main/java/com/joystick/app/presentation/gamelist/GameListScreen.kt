@@ -21,9 +21,7 @@ import com.joystick.app.ui.theme.JoystickTheme
 
 @Composable
 fun GameListScreen(
-    genre: String,
     onGameClick: (Int) -> Unit,
-    onBackClick: () -> Unit,
     viewModel: GameListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -32,7 +30,6 @@ fun GameListScreen(
         uiState = uiState,
         availableGenres = viewModel.availableGenres,
         onGameClick = onGameClick,
-        onBackClick = onBackClick,
         onSearchQueryChanged = viewModel::onSearchQueryChanged,
         onGenreSelected = viewModel::onGenreSelected,
         onRetry = viewModel::retry,
@@ -47,7 +44,6 @@ internal fun GameListScreenContent(
     uiState: GameListUiState,
     availableGenres: List<String>,
     onGameClick: (Int) -> Unit,
-    onBackClick: () -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onGenreSelected: (String) -> Unit,
     onRetry: () -> Unit,
@@ -79,15 +75,13 @@ internal fun GameListScreenContent(
                 is GameListUiState.Error -> {
                     GameListEmptyView(
                         reason = EmptyReason.NO_GENRE_RESULTS,
-                        onRetry = onRetry,
-                        onBackClick = onBackClick
+                        onRetry = onRetry
                     )
                 }
                 is GameListUiState.Empty -> {
                     GameListEmptyView(
                         reason = state.reason,
-                        onRetry = onRetry,
-                        onBackClick = onBackClick
+                        onRetry = onRetry
                     )
                 }
                 is GameListUiState.Success -> {
@@ -163,7 +157,6 @@ private fun GameListScreenPreview() {
             ),
             availableGenres = listOf("action", "adventure", "shooter"),
             onGameClick = {},
-            onBackClick = {},
             onSearchQueryChanged = {},
             onGenreSelected = {},
             onRetry = {},

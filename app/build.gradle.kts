@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -83,8 +84,11 @@ dependencies {
     // Coil
     implementation(libs.coil)
 
-    // Navigation
-    implementation(libs.navigation.compose)
+    // Navigation 3
+    implementation(libs.nav3.runtime)
+    implementation(libs.nav3.ui)
+    implementation(libs.nav3.lifecycle)
+    implementation(libs.kotlinx.serialization)
 
     // Lifecycle
     implementation(libs.lifecycle.viewmodel)

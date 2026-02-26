@@ -20,8 +20,11 @@ import com.joystick.app.ui.theme.JoystickTheme
 
 @Composable
 fun GameDetailScreen(
+    gameId: Int,
     onBackClick: () -> Unit,
-    viewModel: GameDetailViewModel = hiltViewModel()
+    viewModel: GameDetailViewModel = hiltViewModel<GameDetailViewModel, GameDetailViewModel.Factory>(
+        creationCallback = { it.create(gameId) }
+    )
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedTrailer by viewModel.selectedTrailer.collectAsStateWithLifecycle()

@@ -13,17 +13,22 @@ import kotlinx.coroutines.async
 import com.joystick.app.domain.usecase.GetGameTrailersUseCase
 import com.joystick.app.domain.usecase.GetGameScreenshotsUseCase
 import com.joystick.app.domain.model.Trailer
-import javax.inject.Inject
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 
-@HiltViewModel
-class GameDetailViewModel @Inject constructor(
+@HiltViewModel(assistedFactory = GameDetailViewModel.Factory::class)
+class GameDetailViewModel @AssistedInject constructor(
     private val getGameDetailUseCase: GetGameDetailUseCase,
     private val getGameTrailersUseCase: GetGameTrailersUseCase,
     private val getGameScreenshotsUseCase: GetGameScreenshotsUseCase,
-    savedStateHandle: SavedStateHandle
+    @Assisted private val gameId: Int
 ) : ViewModel() {
 
-    private val gameId: Int = savedStateHandle["gameId"] ?: error("gameId required")
+    @AssistedFactory
+    interface Factory {
+        fun create(gameId: Int): GameDetailViewModel
+    }
 
     private val _uiState = MutableStateFlow<GameDetailUiState>(GameDetailUiState.Loading)
     val uiState: StateFlow<GameDetailUiState> = _uiState.asStateFlow()
