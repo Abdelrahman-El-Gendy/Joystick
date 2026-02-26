@@ -3,14 +3,6 @@
 
 ---
 
-## 📸 Screenshots
-<!-- Add screenshots here -->
-| Game Browser | Game Detail | Trailer |
-|---|---|---|
-| ![Game Browser]() | ![Game Detail]() | ![Trailer]() |
-
----
-
 ## 🛠️ Tech Stack
 
 | Category | Technology | Reason |
