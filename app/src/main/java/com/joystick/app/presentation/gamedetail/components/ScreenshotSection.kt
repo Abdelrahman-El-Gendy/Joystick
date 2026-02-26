@@ -32,7 +32,10 @@ internal fun ScreenshotSection(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (isLoading) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(end = 24.dp)
+            ) {
                 items(3) {
                     ShimmerBox(
                         modifier = Modifier
@@ -42,7 +45,10 @@ internal fun ScreenshotSection(
                 }
             }
         } else {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(end = 24.dp)
+            ) {
                 items(screenshots, key = { it.id }) { screenshot ->
                     ScreenshotCard(imageUrl = screenshot.imageUrl)
                 }

@@ -13,7 +13,7 @@ fun JoystickNavGraph() {
 
     NavDisplay(
         backStack = backStack,
-        onBack = { backStack.removeAt(backStack.size - 1) },
+        onBack = { backStack.removeLastOrNull() },
         entryDecorators = listOf(
             rememberSaveableStateHolderNavEntryDecorator(),
             rememberViewModelStoreNavEntryDecorator()
@@ -30,7 +30,7 @@ fun JoystickNavGraph() {
             entry<GameDetailRoute> { routeKey ->
                 GameDetailScreen(
                     gameId = routeKey.gameId,
-                    onBackClick = { backStack.removeAt(backStack.size - 1) }
+                    onBackClick = { backStack.removeLastOrNull() }
                 )
             }
         }

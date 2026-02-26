@@ -29,6 +29,7 @@ fun GameListScreen(
     GameListScreenContent(
         uiState = uiState,
         availableGenres = viewModel.availableGenres,
+        selectedGenreFromVm = viewModel.genre,
         onGameClick = onGameClick,
         onSearchQueryChanged = viewModel::onSearchQueryChanged,
         onGenreSelected = viewModel::onGenreSelected,
@@ -43,6 +44,7 @@ fun GameListScreen(
 internal fun GameListScreenContent(
     uiState: GameListUiState,
     availableGenres: List<String>,
+    selectedGenreFromVm: String,
     onGameClick: (Int) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onGenreSelected: (String) -> Unit,
@@ -66,9 +68,35 @@ internal fun GameListScreenContent(
         snackbarHostState = snackbarHostState
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+
+            // Genre row — always visible except during initial loading
+            if (uiState !is GameListUiState.InitialLoading) {
+                val selectedGenre = when (uiState) {
+                    is GameListUiState.Success -> uiState.selectedGenre
+                    is GameListUiState.Empty -> uiState.selectedGenre
+                    is GameListUiState.Error -> selectedGenreFromVm
+                    else -> selectedGenreFromVm
+                }
+
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    items(availableGenres) { g ->
+                        FilterChip(
+                            selected = g == selectedGenre,
+                            onClick = { onGenreSelected(g) },
+                            label = { Text(g.replaceFirstChar { it.uppercase() }) },
+                            shape = RoundedCornerShape(50)
+                        )
+                    }
+                }
+            }
+
             when (val state = uiState) {
                 is GameListUiState.InitialLoading -> {
-                    LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
+                    LazyColumn(contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp)) {
                         items(6) { GameCardShimmer() }
                     }
                 }
@@ -88,27 +116,12 @@ internal fun GameListScreenContent(
                     GameListSearchBar(
                         query = state.searchQuery,
                         onQueryChange = onSearchQueryChanged,
-                        modifier = Modifier.fillMaxWidth().padding(16.dp, 8.dp)
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)
                     )
-
-                    // Genre row
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(availableGenres) { g ->
-                            FilterChip(
-                                selected = g == state.selectedGenre,
-                                onClick = { onGenreSelected(g) },
-                                label = { Text(g.replaceFirstChar { it.uppercase() }) },
-                                shape = RoundedCornerShape(50)
-                            )
-                        }
-                    }
 
                     LazyColumn(
                         state = lazyListState,
-                        contentPadding = PaddingValues(vertical = 8.dp)
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp)
                     ) {
                         items(state.filteredGames, key = { it.id }) { game ->
                             GameListItem(game = game, onGameClick = onGameClick)
@@ -156,6 +169,7 @@ private fun GameListScreenPreview() {
                 paginationError = null
             ),
             availableGenres = listOf("action", "adventure", "shooter"),
+            selectedGenreFromVm = "action",
             onGameClick = {},
             onSearchQueryChanged = {},
             onGenreSelected = {},

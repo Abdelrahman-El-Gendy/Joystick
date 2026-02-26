@@ -1,21 +1,20 @@
 package com.joystick.app.presentation.gamedetail
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.joystick.app.domain.model.Trailer
 import com.joystick.app.domain.usecase.GetGameDetailUseCase
+import com.joystick.app.domain.usecase.GetGameScreenshotsUseCase
+import com.joystick.app.domain.usecase.GetGameTrailersUseCase
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.async
-import com.joystick.app.domain.usecase.GetGameTrailersUseCase
-import com.joystick.app.domain.usecase.GetGameScreenshotsUseCase
-import com.joystick.app.domain.model.Trailer
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedFactory
-import dagger.assisted.AssistedInject
 
 @HiltViewModel(assistedFactory = GameDetailViewModel.Factory::class)
 class GameDetailViewModel @AssistedInject constructor(
@@ -33,23 +32,24 @@ class GameDetailViewModel @AssistedInject constructor(
     private val _uiState = MutableStateFlow<GameDetailUiState>(GameDetailUiState.Loading)
     val uiState: StateFlow<GameDetailUiState> = _uiState.asStateFlow()
 
+    private val _selectedTrailer = MutableStateFlow<Trailer?>(null)
+    val selectedTrailer: StateFlow<Trailer?> = _selectedTrailer.asStateFlow()
+
     init {
-        loadGameDetail(gameId)
+        loadGameDetail()
     }
 
-    private fun loadGameDetail(id: Int) {
+    private fun loadGameDetail() {
         viewModelScope.launch {
             _uiState.value = GameDetailUiState.Loading
 
-            // Load core details first
-            getGameDetailUseCase(id)
+            getGameDetailUseCase(gameId)
                 .onSuccess { game ->
                     _uiState.value = GameDetailUiState.Success(
                         game = game,
-                        isLoadingExtras = true  // signal extras still loading
+                        isLoadingExtras = true
                     )
-                    // Load trailers + screenshots in parallel after core details
-                    loadExtras(id)
+                    loadExtras()
                 }
                 .onFailure { error ->
                     _uiState.value = GameDetailUiState.Error(
@@ -59,16 +59,14 @@ class GameDetailViewModel @AssistedInject constructor(
         }
     }
 
-    private fun loadExtras(id: Int) {
+    private fun loadExtras() {
         viewModelScope.launch {
-            // Launch both in parallel
-            val trailersDeferred = async { getGameTrailersUseCase(id) }
-            val screenshotsDeferred = async { getGameScreenshotsUseCase(id) }
+            val trailersDeferred = async { getGameTrailersUseCase(gameId) }
+            val screenshotsDeferred = async { getGameScreenshotsUseCase(gameId) }
 
             val trailers = trailersDeferred.await().getOrElse { emptyList() }
             val screenshots = screenshotsDeferred.await().getOrElse { emptyList() }
 
-            // Update Success state with extras — silently ignore failures
             val current = _uiState.value
             if (current is GameDetailUiState.Success) {
                 _uiState.value = current.copy(
@@ -80,10 +78,6 @@ class GameDetailViewModel @AssistedInject constructor(
         }
     }
 
-    // Track selected trailer for playback
-    private val _selectedTrailer = MutableStateFlow<Trailer?>(null)
-    val selectedTrailer: StateFlow<Trailer?> = _selectedTrailer.asStateFlow()
-
     fun onTrailerSelected(trailer: Trailer) {
         _selectedTrailer.value = trailer
     }
@@ -93,6 +87,6 @@ class GameDetailViewModel @AssistedInject constructor(
     }
 
     fun retry() {
-        loadGameDetail(gameId)
+        loadGameDetail()
     }
 }

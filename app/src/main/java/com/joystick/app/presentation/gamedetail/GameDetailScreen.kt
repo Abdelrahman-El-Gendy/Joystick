@@ -1,8 +1,12 @@
 package com.joystick.app.presentation.gamedetail
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -70,51 +74,70 @@ fun GameDetailScreenContent(
                     val game = state.game
                     val scrollState = rememberScrollState()
 
-                    Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
-                        GameDetailHero(
-                            imageUrl = game.imageUrl,
-                            gameName = game.name,
-                            onBackClick = onBackClick
-                        )
-
-                        Column(modifier = Modifier.padding(24.dp)) {
-                            Text(
-                                text = game.name,
-                                style = MaterialTheme.typography.displaySmall,
-                                color = MaterialTheme.colorScheme.onBackground
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // Scrollable content
+                        Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
+                            GameDetailHero(
+                                imageUrl = game.imageUrl,
+                                gameName = game.name
                             )
-                            Spacer(Modifier.height(16.dp))
 
-                            GameDetailStatsRow(
-                                rating = game.rating,
-                                ratingTop = 5,
-                                metacritic = game.metacritic,
-                                playtime = game.playtime
-                            )
-                            Spacer(Modifier.height(24.dp))
+                            Column(modifier = Modifier.padding(24.dp)) {
+                                Text(
+                                    text = game.name,
+                                    style = MaterialTheme.typography.displaySmall,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                                Spacer(Modifier.height(16.dp))
 
-                            GameDetailInfoChips(
-                                released = game.released,
-                                isTba = game.isTba,
-                                website = game.website
-                            )
-                            Spacer(Modifier.height(24.dp))
+                                GameDetailStatsRow(
+                                    rating = game.rating,
+                                    ratingTop = 5,
+                                    metacritic = game.metacritic,
+                                    playtime = game.playtime
+                                )
+                                Spacer(Modifier.height(24.dp))
 
-                            GameDetailAboutSection(description = game.description)
-                            Spacer(Modifier.height(32.dp))
+                                GameDetailInfoChips(
+                                    released = game.released,
+                                    isTba = game.isTba,
+                                    website = game.website
+                                )
+                                Spacer(Modifier.height(24.dp))
 
-                            TrailerSection(
-                                trailers = state.trailers,
-                                isLoading = state.isLoadingExtras,
-                                onTrailerClick = onTrailerSelected
-                            )
-                            Spacer(Modifier.height(32.dp))
+                                GameDetailAboutSection(description = game.description)
+                                Spacer(Modifier.height(32.dp))
 
-                            ScreenshotSection(
-                                screenshots = state.screenshots,
-                                isLoading = state.isLoadingExtras
-                            )
-                            Spacer(Modifier.height(48.dp))
+                                if (state.isLoadingExtras || state.trailers.isNotEmpty()) {
+                                    TrailerSection(
+                                        trailers = state.trailers,
+                                        isLoading = state.isLoadingExtras,
+                                        onTrailerClick = onTrailerSelected
+                                    )
+                                    Spacer(Modifier.height(32.dp))
+                                }
+
+                                if (state.isLoadingExtras || state.screenshots.isNotEmpty()) {
+                                    ScreenshotSection(
+                                        screenshots = state.screenshots,
+                                        isLoading = state.isLoadingExtras
+                                    )
+                                }
+                                Spacer(Modifier.height(48.dp))
+                            }
+                        }
+
+                        // Fixed back button — always visible on top
+                        IconButton(
+                            onClick = onBackClick,
+                            modifier = Modifier
+                                .padding(top = 40.dp, start = 16.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                                    shape = RoundedCornerShape(percent = 50)
+                                )
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     }
                 }

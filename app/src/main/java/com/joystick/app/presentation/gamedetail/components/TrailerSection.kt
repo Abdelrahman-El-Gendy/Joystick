@@ -41,7 +41,10 @@ internal fun TrailerSection(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (isLoading) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(end = 24.dp)
+            ) {
                 items(2) {
                     ShimmerBox(
                         modifier = Modifier
@@ -51,7 +54,10 @@ internal fun TrailerSection(
                 }
             }
         } else {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(end = 24.dp)
+            ) {
                 items(trailers, key = { it.id }) { trailer ->
                     TrailerThumbnailCard(
                         trailer = trailer,
