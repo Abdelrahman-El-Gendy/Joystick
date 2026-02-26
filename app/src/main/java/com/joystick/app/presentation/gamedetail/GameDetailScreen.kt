@@ -19,6 +19,7 @@ import com.joystick.app.domain.model.GameDetail
 import com.joystick.app.domain.model.Screenshot
 import com.joystick.app.domain.model.Trailer
 import com.joystick.app.presentation.gamedetail.components.*
+import com.joystick.app.ui.components.ErrorStateView
 import com.joystick.app.ui.components.JoystickScaffold
 import com.joystick.app.ui.theme.JoystickTheme
 
@@ -61,14 +62,10 @@ fun GameDetailScreenContent(
                     }
                 }
                 is GameDetailUiState.Error -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize().padding(24.dp),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(state.message, color = MaterialTheme.colorScheme.error)
-                        Button(onClick = retry) { Text("Retry") }
-                    }
+                    ErrorStateView(
+                        errorMessage = state.message,
+                        onRetry = retry
+                    )
                 }
                 is GameDetailUiState.Success -> {
                     val game = state.game

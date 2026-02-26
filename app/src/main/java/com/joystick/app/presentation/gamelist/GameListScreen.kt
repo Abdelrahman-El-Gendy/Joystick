@@ -15,6 +15,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.joystick.app.domain.model.Game
 import com.joystick.app.presentation.gamelist.components.*
+import com.joystick.app.ui.components.ErrorStateView
 import com.joystick.app.ui.components.JoystickScaffold
 import com.joystick.app.ui.components.JoystickTopBar
 import com.joystick.app.ui.theme.JoystickTheme
@@ -101,8 +102,8 @@ internal fun GameListScreenContent(
                     }
                 }
                 is GameListUiState.Error -> {
-                    GameListEmptyView(
-                        reason = EmptyReason.NO_GENRE_RESULTS,
+                    ErrorStateView(
+                        errorMessage = state.message,
                         onRetry = onRetry
                     )
                 }
