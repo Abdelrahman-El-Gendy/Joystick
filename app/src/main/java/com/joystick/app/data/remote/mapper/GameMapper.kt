@@ -12,6 +12,7 @@ import com.joystick.app.data.remote.dto.ScreenshotDto
 import com.joystick.app.data.remote.dto.ScreenshotsResponseDto
 import com.joystick.app.domain.model.Trailer
 import com.joystick.app.domain.model.Screenshot
+import com.joystick.app.data.local.entity.GameEntity
 
 /**
  * Pure mapping functions: DTO → Domain.
@@ -65,3 +66,25 @@ fun TrailersResponseDto.toDomain() = results.map { it.toDomain() }
 fun ScreenshotsResponseDto.toDomain() = results
     .filter { !it.isDeleted }
     .map { it.toDomain() }
+
+// Entity → Domain and Domain → Entity (Room)
+fun GameEntity.toDomain() = Game(
+    id = id,
+    name = name,
+    imageUrl = imageUrl,
+    rating = rating,
+    metacritic = metacritic,
+    released = released
+)
+
+fun Game.toEntity(genre: String, page: Int) = GameEntity(
+    id = id,
+    name = name,
+    imageUrl = imageUrl,
+    rating = rating,
+    metacritic = metacritic,
+    released = released,
+    genre = genre,
+    page = page,
+    cachedAt = System.currentTimeMillis()
+)
