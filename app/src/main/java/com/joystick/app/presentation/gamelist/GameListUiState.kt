@@ -6,6 +6,15 @@ sealed interface GameListUiState {
 
     object InitialLoading : GameListUiState
 
+    /**
+     * Emitted when the user switches genres (or retries after an error).
+     * The genre row and search bar remain visible while only the content list shimmers.
+     */
+    data class GenreLoading(
+        val selectedGenre: String?,
+        val searchQuery: String = ""
+    ) : GameListUiState
+
     data class Success(
         val allGames: List<Game>,
         val filteredGames: List<Game>,

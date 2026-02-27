@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 @HiltViewModel
@@ -38,16 +37,20 @@ class GameListViewModel @Inject constructor(
     private var searchQuery = ""
 
     init {
-        loadGames()
+        loadGames(isInitial = true)
     }
 
-    fun loadGames() {
+    private fun loadGames(isInitial: Boolean = false) {
         currentPage = 1
         hasNextPage = true
         searchQuery = ""
         allGames.clear()
 
-        _uiState.value = GameListUiState.InitialLoading
+        _uiState.value = if (isInitial) {
+            GameListUiState.InitialLoading
+        } else {
+            GameListUiState.GenreLoading(selectedGenre = genre)
+        }
 
         viewModelScope.launch {
             getGamesUseCase(genre = genre, page = 1).fold(
@@ -170,6 +173,7 @@ class GameListViewModel @Inject constructor(
     fun retry() {
         loadGames()
     }
+
 
     fun clearPaginationError() {
         val currentState = _uiState.value
